@@ -47,14 +47,6 @@ section .data
     iend
     sockaddr_in_len     equ $ - pop_sa
 
-    client_sa istruc sockaddr_in
-        at sockaddr_in.sin_family, dw 2            ; AF_INET
-        at sockaddr_in.sin_port, dw 0xa1ef        
-        at sockaddr_in.sin_addr, dd 0             ; localhost
-        at sockaddr_in.sin_zero, dd 0, 0
-    iend
-    client_sockaddr_in_len     equ $ - client_sa
-
     key                          db "a"
 
 section .text
@@ -66,6 +58,7 @@ _start:
     call     _connect
     .mainloop:
       call   _send
+      call   _recieve
       jmp .mainloop
     call   _close_sock
     mov    word [sock], 0
@@ -100,23 +93,7 @@ _socket:
 
 ;; Calls sys_bind and sys_listen to start listening for connections
 _connect:
-    mov        rax, 49                  ; SYS_BIND
-    mov        rdi, [sock]              ; listening socket fd
-    mov        rsi, client_sa              ; sockaddr_in struct
-    mov        rdx, client_sockaddr_in_len     ; length of sockaddr_in
-    syscall
-
-    ;; Check call succeeded
-    cmp        rax, 0
-    jl         _bind_fail
-
-    ;; Bind succeeded, call sys_connect
-    mov         rsi, bind_suc_msg
-    mov         rdx, bind_suc_msg_len
-    mov         rax, 1 ; SYS_WRITE
-    mov         rdi, 1 ; STDOUT
-    syscall
-    
+    ;; call sys_connect
     mov        rax, 42                  ; SYS_CONNECT
     mov        rdi, [sock]              ; client socket fd
     mov        rsi, pop_sa              ; sever address in struct
@@ -181,6 +158,34 @@ _send:
     jl        _accept_fail
 
     ret
+
+_recieve:
+    mov rax, 0
+    mov rsi, echobuf
+    mov rdx, 256
+    mov rdi, [sock]
+    syscall
+
+    mov      [read_count], rax
+
+    mov rdi, echobuf
+    mov rcx, 0
+    .encryptloop:   
+        cmp rcx, 256
+        je .encryptdone
+        mov al, [rdi]
+        xor al, [key]
+        mov [rdi],al
+        inc rdi
+        inc rcx
+        jmp .encryptloop
+    .encryptdone:
+    mov         rsi, echobuf
+    mov         rdx, read_count
+    mov         rax, 1 ; SYS_WRITE
+    mov         rdi, 1 ; STDOUT
+    syscall
+    ret 
 
 ;; Performs sys_close on the socket in rdi
 _close_sock:

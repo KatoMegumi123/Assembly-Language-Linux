@@ -73,7 +73,7 @@ _start:
         ;; up the connection on their end.
         .readloop:
             call     _read
-            ;call     _echo
+            call     _echo
             
             ;; read_count is set to zero when client hangs up
             mov     rax, [read_count]
@@ -222,6 +222,19 @@ _read:
 ;; Sends up to the value of read_count bytes from echobuf to the client socket
 ;; using sys_write 
 _echo:
+
+    mov rdi, echobuf
+    mov rcx, 0
+    .encryptloop:   
+        cmp rcx, 256
+        je .encryptdone
+        mov al, [rdi]
+        xor al, [key]
+        mov [rdi],al
+        inc rdi
+        inc rcx
+        jmp .encryptloop
+    .encryptdone:
     mov     rax, 1               ; SYS_WRITE
     mov     rdi, [client]        ; client socket fd
     mov     rsi, echobuf         ; buffer

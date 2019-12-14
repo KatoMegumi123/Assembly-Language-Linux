@@ -117,14 +117,14 @@ _send:
     ;; Call sys_accept
     mov rdi, echobuf
     mov rcx, 0
-    .clearloop:   
+    .clearloop:
         cmp rcx, 256
         je .cleardone
-        mov [rdi], byte 0
+        mov [echobuf+rcx], byte 0
         inc rdi
         inc rcx
         jmp .clearloop
-    .cleardone:   
+    .cleardone:
     mov rax, 0
     mov rdi, 0
     mov rsi, echobuf
